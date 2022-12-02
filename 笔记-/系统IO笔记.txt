@@ -1,0 +1,127 @@
+
+	标准IO其实际上是间接调用系统IO实现的，标准IO有缓冲区，系统IO没有缓冲区。
+	因此标准IO更适合操作普通文件，系统IO更适合操作设备文件。
+	
+	
+	Linux IO的相关API
+	
+1，打开或关闭一个文件
+NAME
+       open, openat, creat - open and possibly create a file
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <sys/stat.h>
+       #include <fcntl.h>
+
+	open 用来打开一个文件(或创建一个文件并打开它)
+       int open(const char *pathname, int flags);
+       int open(const char *pathname, int flags, mode_t mode);
+			@pathname： 要打开或创建的文件名(带路径)
+			@flags: 打开标志。告诉系统是以何种方式打开这个文件 
+				O_RDONLY: read only 只读方式 
+				O_WRONLY: write only 只写方式
+				O_RDWR : 可读可写方式
+					以上三个标志必选其一
+				O_APPEND: append追加方式，打开后光标在文件末尾
+				O_CREAT: create创建标志位(如果文件不存在，则创建)
+					O_EXCL: 该标志一般和O_CREAT配合使用，用来测试文件是否存在
+					指定O_EXCL|O_CREAT,如果文件存在，则open失败，并且 errno==> EEXIST
+				O_NONBLOCK: non block 非阻塞方式打开文件
+					该标志位如果设置，则为非阻塞方式打开
+					该标志位如果不设置，默认为阻塞方式打开
+				O_TRUNC: truncate，截断标志 
+					如果文件存在，并且是一个普通文件，而且打开方式为O_RDWR/O_WRONLY，
+					则文件内容会被清空。
+				...
+				以上标志，可以用 | 来组合
+			@mode: 当第二个参数指定了 O_CREAT(创建标志)，那么就必须有第三个参数mode来指定
+				创建的文件的权限，有两种指定方式
+				(1) user:   S_IRUSR  S_IWUSR   S_IXUSR  ==> S_IRWXU
+					group:  S_IRGRP  S_IWGRP   S_IXGRP  ==> S_IRWXG
+					other:  S_IROTH  S_IWOTH   S_IXOTH  ==> S_IRWXO 
+					eg:  S_IRUSR | S_IWUSR | S_IRGRP
+				(2)用八进制表示
+					0664 ==> user:可读可写  group:可读可写  other:只读
+		返回值:
+			如果成功，返回文件描述符(>0的整数，后续所有对该文件的操作都必须通过它，因为它就代表了这个文件)
+			如果失败，返回-1，并且errno被设置。
+
+       int creat(const char *pathname, mode_t mode);
+			<===>  open(pathname, O_CREAT , mode)
+----------------------------------------------------------------------------------------------------------
+NAME
+       close - close a file descriptor
+
+SYNOPSIS
+
+       #include <unistd.h>
+
+	close 用来关闭一个已经打开的文件
+       int close(int fd);
+			@fd: 指定要打开的那个文件的文件描述符(open的返回值)
+		返回值:
+			成功，返回0 
+			失败，返回-1
+			
+2, 读/写一个文件
+NAME
+       read - read from a file descriptor
+
+SYNOPSIS
+       #include <unistd.h>
+
+	read用来从fd指定的文件中，读取count个字节的数据，保存到buf指向的内存空间 
+       ssize_t read(int fd, void *buf, size_t count);
+			@fd： 文件描述符，指定读取哪个文件
+			@buf: 指向保存从文件读到的文件
+			@count: 读取到多少个字节的数据 
+		返回值:
+			>0 : 实际读取到的数据的个数
+			=0 : 到达文件末尾了(文件结束了)
+			<0 : 出错了，同时errno被设置
+-----------------------------------------------------------------------------
+NAME
+       write - write to a file descriptor
+
+SYNOPSIS
+       #include <unistd.h>
+
+	write用来把buf指向的内存空间的数据写入到fd指定的文件中，写count个字节的数据
+       ssize_t write(int fd, const void *buf, size_t count);
+			@fd: 要写入数据的文件描述符 
+			@buf: 指向保存写入数据的内存空间
+			@count: 写入多少个字节的数据
+		返回值: 
+			>0 : 实际写入到文件的数据的个数
+			=0 ：什么都没写 
+			<0 : 出错了,同时errno被设置
+			
+3，光标重定位  
+NAME
+       lseek - reposition read/write file offset
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <unistd.h>
+
+	lseek用来把fd指定的文件进行光标重定位
+       off_t lseek(int fd, off_t offset, int whence);
+			@fd: 文件描述符，要定位的文件
+			@offset: 要设置的偏移量
+			@whence: 定位方式，有三种 
+				SEEK_SET: 基于文件开头的定位
+					新的光标位置为文件开头+offset(不能为负数)
+				SEEK_CUR: 基于当前光标位置定位
+					新的光标位置为当前位置+offset(可正可负)
+				SEEK_END: 基于文件末尾位置定位
+					新的光标位置为文件末尾+offset(可正可负)
+		返回值:
+			成功，返回新的光标位置距离文件开头的偏移量
+			失败，返回-1
+
+作业:  拷贝图片文件
+	在网上下载一张图片 1.png,写个程序，创建一个2.png，并把1.png 
+	的内容读到2.png，使2.png也能打开显示
+	
+	

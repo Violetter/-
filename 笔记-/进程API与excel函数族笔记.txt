@@ -1,0 +1,219 @@
+1，创建一个进程
+NAME
+       fork - create a child process
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <unistd.h>
+
+	fork用来创建一个子进程的。
+	pid_t 该类型用来表示进程的进程号(PID,PPID),在头文件中已声明。在操作系统内部
+	会为每一个进程分配一个与别的进程不相同的ID号，用来标识该进程。
+       pid_t fork(void);
+		返回值:
+			失败返回-1，此时只有一个进程返回。
+			成功(创建了新的子进程)。
+				>0: 表示父进程返回，且此时的返回值是子进程的进程号
+				=0: 表示的是子进程返回。
+				
+	fork内部会调用 clone()新创建的子进程拷贝父进程的地址空间(子进程拷贝父进程里面绝大部分
+	的数据，包括系统数据等数据，除了进程号)。
+	fork调用成功会产生一个子进程，子进程的代码执行点和父进程一样(fork返回处)。
+	fork一次调用，有两次返回。 一次是父进程返回，一次是子进程返回。
+	fork成功后谁先执行是不确定的(由任务调度算法来确定，一般是由时间片轮转算法)。
+	
+----------------------------------------------------------------------------
+NAME
+       vfork - create a child process and block parent
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <unistd.h>
+
+	vfork的功能跟fork类似，只不过会堵塞父进程，即子进程执行结束后，才运行父进程。
+       pid_t vfork(void);
+	   
+------------------------------------------------------------------------------
+NAME
+       system - execute a shell command
+
+SYNOPSIS
+       #include <stdlib.h>
+
+	system用来执行command命令，只不过使用vfork实现的。所以会阻塞该进程，直到command
+	命令运行完毕。
+       int system(const char *command);
+	   
+2，得到进程号的函数
+NAME
+       getpid, getppid - get process identification
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <unistd.h>
+
+	getpid用来返回自身进程的进程号
+	getppid用来返回父进程的进程号
+       pid_t getpid(void);
+       pid_t getppid(void);
+	   
+3，进程的退出
+	一个进程退出有三种情况
+	1) main 函数执行完了 ==> 正常死亡
+	2) 被杀 ==> 非正常死亡
+	3) exit/_exit  ==> 自杀
+	
+
+NAME
+       exit - cause normal process termination
+
+SYNOPSIS
+       #include <stdlib.h>
+	
+	exit 用来结束进程。进程在结束之前，会做一些清理工作，如把缓冲区里的内容写进文件。
+       void exit(int status);
+			@status: 退出码，与main函数的返回值是一样的。
+----------------------------------------------------
+NAME
+       _exit, _Exit - terminate the calling process
+
+SYNOPSIS
+       #include <unistd.h>
+
+	_exit 用来立马退出，不做清理工作。
+       void _exit(int status);
+			@status: 退出码，与main函数的返回值是一样的。
+			
+4. wait/waitpid 
+	wait/waitpid 用来等待某个子进程的状态发生改变。
+	等待的状态改变有如下三种情况:
+		1)子进程退出
+		2)子进程被信号中止 ==> 阻塞状态
+		3)子进程被信号唤醒 ==> 恢复到就绪态
+
+NAME
+       wait, waitpid, waitid - wait for process to change state
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <sys/wait.h>
+
+	wait 用来等待某个子进程的状态发生改变。
+	如果调用wait时，所有的子进程都已经退出，那么wait会立马返回。其他情况，wait会阻塞
+调用进程，直到有一个子进程状态发生改变。
+	如果一个子进程退出时，其父进程没有调用wait，那么该子进程就会变成僵尸(Zombie)进程,
+僵尸进程，是指进程已经执行完了，但是其系统资源没有完全释放的进程。
+	wait/waitpid除了等待子进程状态发生改变外，另外一个作用就是回收资源(主要是指PCB(进程控制块))，
+而CPU和内存会自动释放)。
+	"孤儿进程": 父进程结束，自身还没有结束的进程。由爷爷托管，或者由1号进程托管。
+       pid_t wait(int *wstatus);
+			@wstatus: 指针。用来保存退出的子进程的退出状态。
+		我们可以用下面的这些宏来解析它的信息和含义:
+			WIFEXITED(wstatus)为真，表示该子进程是正常退出的。
+				WEXITSTATUS(wstatus)返回该子进程的返回值(退出码),8bits无符号整数
+			WIFSIGNALED(wstatus)为真，表示该子进程是被信号结束的
+				WTERMSIG(wstatus)返回结束该子进程的那个信号的信号值
+			WIFSTOPPED(wstatus)为真，表示该子进程是被信号中止(stop)的 
+				WSTOPSIG(wstatus)返回中止该子进程的那个信号的信号值
+			WIFCONTINUED(wstatus)为真，表示该子进程被信号唤醒的
+		
+		返回值:  
+			成功(至少有一个子进程的状态发生改变)，返回状态改变的那个进程的ID
+			失败返回-1，errno被设置
+	   
+
+	waitpid的功能与wait类似，只不过它可以指定等待哪个或哪些子进程
+       pid_t waitpid(pid_t pid, int *wstatus, int options);
+			@pid: 用来指定等待哪个子进程或哪些子进程
+				pid > 0: 表示等待指定的子进程
+				pid == -1: 表示等待任意子进程
+				pid < -1: 表示等待组ID等于pid的绝对值的任意子进程
+			@wstatus: 指针。用来保存退出的子进程的退出状态。
+			@options: 等待方式，一般为0。当设置为 WNOHANG表示不阻塞。
+					 非阻塞方式，假如没有子进程的状态改变则立马返回
+		返回值：
+			成功返回状态改变的那个进程的ID。如果设置了 WNOHANG方式且有子进程的状态
+			没有发生时，则立马返回0。
+			失败返回-1，errno被设置。
+			
+5，exec 函数族
+NAME
+       execl, execlp, execle, execv, execvp, execvpe - execute a file
+
+SYNOPSIS
+       #include <unistd.h>
+
+       extern char **environ;
+
+	l: list，把参数列出来，以NULL表示参数结束
+       int execl(const char *path, const char *arg, .../* (char  *) NULL */);
+			@path: 要执行的程序的路径名(相对路径或者绝对路径)
+			@arg: 参数列表，一个一个参数字符串，有多个个参数就传多少个参数字符串。
+				  注意：要以第0个参数开始(即程序名)，最后以NULL结束
+		返回值: 
+			exec函数它只有失败的时候才会返回(返回负数，errno被设置)，如果成功了就不会再回来了，
+			因为它会被新的程序替换了进程的地址空间，但是保留原来的进程号。
+		eg:	int r = execl("/home/china/sum","/home/china/sum","12","23",NULL);
+		
+	p: path。要执行的那个程序文件，就在PATH环境变量指定的目录下面(即就是命令)，所以就不需要指定路径
+       int execlp(const char *file, const char *arg, .../* (char  *) NULL */);
+			@file: 要执行的命令(不需要路径)
+			@arg: 参数列表，一个一个参数字符串，有多个个参数就传多少个参数字符串。
+				  注意：要以第0个参数开始(即程序名)，最后以NULL结束
+		返回值: 
+			失败时返回-1,errno被设置 
+		eg:	int r = execlp("echo","echo","hello","are","you","ok?",NULL);	
+		
+	e: environment环境变量。表示把一个环境变量的字符串指针数组传递过去。(此时要执行的那个程序的
+	main函数需要有第三个参数)
+		int main(int argc, char *argv[], char *envp[])
+	
+       int execle(const char *path, const char *arg, .../*, (char *) NULL, char * const envp[] */);
+			@path: 要执行的程序的路径名(相对路径或者绝对路径)
+			@arg: 参数列表，一个一个参数字符串，有多个个参数就传多少个参数字符串。
+				  注意：要以第0个参数开始(即程序名)，最后以NULL结束
+			@envp: 保存环境变量的字符串指针数组
+		返回值: 
+			exec函数它只有失败的时候才会返回(返回负数，errno被设置)，如果成功了就不会再回来了，
+			因为它会被新的程序替换了进程的地址空间，但是保留原来的进程号。
+		eg:
+			char *envp[4]={"FOOD=rice","FRUIT=apple","DRINK=water",NULL};
+			int r = execle("./sum", "./sum", "1", "2", NULL, envp);
+      
+
+
+	v: vector向量(数组)，参数以字符串指针数组的形式传递，同样的，最后也是以NULL结束。
+	   int execv(const char *path, char *const argv[]);
+	   eg:
+	       char *argv[]={"./sum","1","2",NULL};
+		   int r = execv("./sum",argv);
+       int execvp(const char *file, char *const argv[]);
+		eg: 
+			 char *argv[]={"echo","are","you","ok?",NULL};
+			 exevp("echo",argv);
+       int execvpe(const char *file, char *const argv[],char *const envp[]);
+	   eg:
+			char *envp[4]={"FOOD=rice","FRUIT=apple","DRINK=water",NULL};
+			char *argv[]={"./sum","1","2",NULL};
+		   int r = execvpe("./sum",argv,envp);
+
+作业:
+	1,把今天的内容理解、消化、记忆
+	2,简单音乐播放器
+		
+		把一个目录的mp3文件，循环播放。
+	提示:
+		1) 怎么找mp3文件
+			把一个录下的mp3的路径名保存到一个循环链表里
+		2) 怎么放歌 
+			先fork一个子进程，然后让子进程用 execlp函数 替换成 madplay命令
+			int r = execlp("madplay","madplay",mp3_path,NULL);
+		3) 如何实现控制
+			父进程等儿子死，死了再生一个
+	
+  
+
+
+
+
+

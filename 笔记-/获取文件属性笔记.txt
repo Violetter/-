@@ -1,0 +1,175 @@
+1, stat,fstat,lstat 用来获取文件的属性信息
+NAME
+       stat, fstat, lstat, fstatat - get file status
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <sys/stat.h>
+       #include <unistd.h>
+
+	stat 用来把pathname指定的文件(包含目录，普通文件，设备文件)的状态及属性信息
+	保存到statbuf指向的结构体变量中去。
+	fstat与stat的功能类似，只不过该函数使用文件描述符来指定文件。
+	lstat与stat的功能类似，只不过pathname指定的文件如果是符号链接时，lstat获取的是
+		符号链接文件本身的属性，而stat获取的是链接文件指向的文件的属性。
+		
+       int stat(const char *pathname, struct stat *statbuf);
+       int fstat(int fd, struct stat *statbuf);
+       int lstat(const char *pathname, struct stat *statbuf);
+	   
+	返回值:
+		成功，返回0
+		失败，返回-1，errrno被设置
+		
+	在linux/Unix中文件的属性信息，用结构体struct stat来表示的，其内容为:
+	struct stat {
+               dev_t     st_dev;  //dev_t设备号类型，容纳该文件的那个设备的设备号
+               ino_t     st_ino;  //inode number
+               mode_t    st_mode; //文件的权限(包含类型)
+               nlink_t   st_nlink;//Inode的硬链接数
+               uid_t     st_uid;  //文件的属主的用户ID
+               gid_t     st_gid;  //文件属主的组ID
+               dev_t     st_rdev; //设备号(如果该文件时候是设备文件)
+               off_t     st_size; //文件内容的长度(字节)
+								//st_size对普通文件(文本文件、二进制文件)指文件内容长度
+								//st_size对目录而言，文件长度通常是一个数的倍数
+								//st_size对符号链接文件，符号链接文件的内容是指向文件的名字
+               blksize_t st_blksize; //block size 块大小 (与具体的硬件有关)
+               blkcnt_t  st_blocks; //文件占多少块(在linux下面每个块是512字节)
+
+               struct timespec st_atim; //最近访问"文件内容"的时间
+               struct timespec st_mtim; //最近修改"文件内容"的时间
+               struct timespec st_ctim; //最近改变"文件属性"的时间
+	};
+	
+	其中 st_mode 包含了文件的类型与权限，我们可以用下列的宏来解析 
+		S_ISREG(st.st_mode) 为真，表示为普通文件(regular file) -
+		S_ISDIR(st.st_mode) 为真，表示为目录文件(directory) d 
+		S_ISCHR(st.st_mode) 为真，表示为字符设备文件(char)  c 
+		S_ISBLK(st.st_mode) 为真，表示为块设备文件(block) b 
+		S_ISFIFO(st.st_mode) 为真，表示为管道文件(pipi) p 
+		S_ISLNK(st.st_mode) 为真，表示为符号链接文件(link) l 
+		S_ISSOCK(st.st_mode) 为真，表示为套接字文件(socket) s 
+		
+		判断文件的权限位，我们可以用下列的宏来解析 
+			S_IRUSR  S_IWUSR   S_IXUSR
+			S_IRGRP  S_IWGRP   S_IXGRP
+			S_IROTH  S_IWOTH   S_IXOTH
+			
+			if(st.st_mode & S_IRUSR)
+			{
+				//该文件对用户有读的权限
+			}
+			
+2，access
+       access, faccessat - check user's permissions for a file
+
+SYNOPSIS
+       #include <unistd.h>
+
+	access用来测试调用进程是否有相应的权限去访问pathname指定的文件 
+       int access(const char *pathname, int mode);
+			@pathname: 要测试的文件的路径名
+			@mode: 要测试的访问权限，按位或测试多个权限 
+				R_OK: 测试读的权限
+				W_OK: 测试写的权限
+				X_OK: 测试执行的权限
+				F_OK: 测试文件是否存在
+		返回值:
+			0 所有测试的权限都OK
+			-1 至少有一项测试权限不OK
+			
+3,umask
+NAME
+       umask - set file mode creation mask
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <sys/stat.h>
+
+	umask 用来指定文件的权限掩码位
+	umask中为1的权限位，你会创建文件时，不能指定，我们称为安全权限。
+	比如在根目录下写的权限会被掩盖掉。最后效果为 与上掩码的取反。
+       mode_t umask(mode_t mask);
+
+4，chmod/fchmod  用来改变文件的权限位			
+       chmod, fchmod, fchmodat - change permissions of a file
+
+SYNOPSIS
+       #include <sys/stat.h>
+
+	chmod/fchmod 用来改变文件的权限位，只不过chmod用pathname字符串指定文件名，
+	fchmod用文件描述符来指定文件名。
+	
+       int chmod(const char *pathname, mode_t mode);
+       int fchmod(int fd, mode_t mode);
+	   
+5，truncate/ftruncate
+NAME
+       truncate, ftruncate - truncate a file to a specified length
+
+SYNOPSIS
+       #include <unistd.h>
+       #include <sys/types.h>
+
+	truncate/ftruncate用来把文件截短到指定的长度
+       int truncate(const char *path, off_t length);
+       int ftruncate(int fd, off_t length);
+	注意: 把一个文件截短首先需要有写的权限
+
+6，getcwd			
+NAME
+       getcwd, getwd, get_current_dir_name - get current working directory
+
+SYNOPSIS
+       #include <unistd.h>
+
+	getcwd用来获取当前的工作路径(绝对路径)，保存到buf指向的字符数组，数组大小为size
+       char *getcwd(char *buf, size_t size);
+	   
+7，chdir
+SYNOPSIS
+       #include <unistd.h>
+
+	chdir用来把当前路径修改为path指定的路径(实质上是把进程的PWD环境变量进行修改)
+       int chdir(const char *path);
+	   
+8, remove/unlink 用来删除一个文件或目录
+NAME
+       remove - remove a file or directory
+
+SYNOPSIS
+       #include <stdio.h>
+	
+	remove用来删除一个文件或者一个空目录
+       int remove(const char *pathname);
+	
+NAME
+       unlink, unlinkat - delete a name and possibly the file it refers to
+
+SYNOPSIS
+       #include <unistd.h>
+
+	unlink用来删除一个文件
+       int unlink(const char *pathname);
+	   
+9，system 用来执行一个程序或者命令
+NAME
+       system - execute a shell command
+
+SYNOPSIS
+       #include <stdlib.h>
+
+       int system(const char *command);
+	   
+	   
+作业:
+	1) 把今天的内容消化
+	2) 获取mp3文件
+	   把一个目录(里面可能还有目录)里面的所有mp3文件的路径名保存到一个双向链表中。
+	   提示:
+		1) 目录的递归访问
+		2) 通过判断文件的扩展名来判断是不是mp3文件
+
+	
+	

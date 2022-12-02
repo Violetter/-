@@ -1,0 +1,55 @@
+1, GCC 编译过程
+
+	gcc  hello.c   -o  hello   这个过程其实是分四步完成的
+	
+	step1: 预处理(preprocessing)，处理c程序中以'#'开头的行
+		(arm-linux)-gcc  -E  hello.c  -o  hello.i
+		==> hello.i这个文件还是C源码文件
+		
+		
+	step2: 编译(compiling)，把c源代码文件编译成汇编文件
+		(arm-linux)-gcc  -S  hello.i(hello.c)  -o  hello.s
+		==> hello.s这个文件是一个汇编指令文件
+		
+	step3: 汇编(assembling),把一个汇编文件编译成一个目标文件(机器指令文件)
+		(arm-linux-)gcc  -c  hello.s  -o  hello.o
+		(arm-linux-)as   hello.s  -o  hello.o
+		
+	step4: 链接(linking)，把各个目标文件(.o文件)或.so(库文件)链接成一个可执行文件。
+	     把各个.o文件的数据段合到一起，并且解决地址冲突问题。
+		 
+		无操作系统(裸奔)的情况下，用ld的命令，在arm裸编再详细讲解
+		(arm-linux)-ld  -Ttext=30008000  hello.o  a.o  b.o   -o  hello
+		
+		有操作系统的情况下，命令如下
+		(arm-linux-)gcc   hello.o  a.o  b.o   -o  hello
+		
+2, GDB 调试器
+
+	gcc  -g   hello.c  -o  hello
+	(-g表示生成一个带调试信息的可执行文件)
+	gdb  hello   //用gdb 来调试hello这个程序
+	
+	
+	gbd 调试命令 
+		(gdb) l  函数名  //list 查看函数的源代码，再次l显示剩余内容
+		(gdb) b  6       //设置第6行为一个断点
+		(gdb) b  main    //设置main函数为一个断点
+		(gdb) info b     //查看断点的信息
+		(gdb) clear linenum  //清除断点，linenum 为断点的位置(at)
+		(gdb) r          //run运行代码
+		(gdb) c          //continue  恢复程序运行
+		(gdb) p  n       //print n代表的是一个C语言对象(变量，数组)
+		(gdb) n          //next
+		(gdb) s          //step
+		                 next和step都表示运行下一条指令(步进运行)，
+						 他们的区别仅在下一条指令如果是函数调用时
+						 s(step into)进入到函数里面去步进运行
+						 n(next)把整个函数当成一个指令，直接运行完毕
+		(gdb) finish     //把一个函数运
+		
+		
+		行完
+		(gdb) q          //quit 退出
+		(gdb) help [command] //把命令的帮助文档调出来
+	

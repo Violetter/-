@@ -1,0 +1,19 @@
+System V 是 Unix操作系统最早的商业发行版本之一，
+Linux IPC 是从这个版本继承过来的。
+
+ipc: internal  process communication 进程间通信
+
+system v ipc 提供了三种方式
+			
+					消息队列(弃用)          共享内存             信号量
+头文件     			<sys/msg.h>            <sys/shm.h>           <sys/sem.h>
+
+创建或打开           msgget                 shmget               semget
+IPC的函数
+
+控制IPC函数          msgctl                 shmctl              semctl
+
+IPC操作函数          msgsnd/msgrcv          shmat/shmdt         semop
+
+system  v  ipc  的原理:
+	在内核中申请一个key作为指定在内核空间的一个标签

@@ -1,0 +1,118 @@
+对于每个共享内存，内核维护了如下的信息结构体来表示一个共享内存：
+#includ <sys/shm.h>
+
+	struct shmid_ds {
+	   struct ipc_perm shm_perm;  //共享内存的权限
+	   size_t          shm_segsz; //共享内存的大小(字节)
+	   time_t          shm_atime; //最近映射时间
+	   time_t          shm_dtime; //最近解映射时间
+	   time_t          shm_ctime; //最近修改信息结构体的时间
+	   pid_t           shm_cpid;  //创建共享内存的进程的ID
+	   pid_t           shm_lpid;  //最近操作共享内存的进程的ID
+	   shmatt_t        shm_nattch; //当前映射到进程的数量
+	   ...
+   };
+   
+   
+共享内存的API接口函数:
+1, 申请一个 system_v_ipc 的key
+
+NAME
+       ftok  -  convert  a pathname and a project identifier to a System V IPC
+       key
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <sys/ipc.h>
+
+	ftok用来生成一个system v ipc的key,key用来唯一标识一个system v ipc对象
+	在Linux内核中 ftok用一个路径名和一个整数，以某种算法来生成一个唯一的key。
+	
+       key_t ftok(const char *pathname, int proj_id);
+			@pathname: 一个路径名(要真实存在的路径)
+			@proj_id: 一个整数，一般可以取工程代码
+		返回值:
+			如果成功，返回一个 system v ipc 对象的key
+			如果失败，返回-1,且 errno被设置
+			
+			
+2，创建或打开一个 system v 共享内存区
+NAME
+       shmget - allocates a System V shared memory segment
+
+SYNOPSIS
+       #include <sys/ipc.h>
+       #include <sys/shm.h>
+
+	shmget 用来创建或打开一个system v 共享内存区
+       int shmget(key_t key, size_t size, int shmflg);
+			@key: system_v_ipc 对象的key(由ftok生成)
+			@size: 以字节为单位指定创建的共享内存的大小。
+				   当实际操作为创建一个新的内存区时，必须指定一个不为0的值。
+				   一般size为PAGE_SIZE(4096)的整数倍。
+				   如果实际操作为访问一个已经存在的共享内存区，那么size应为0
+			@shmflg： 操作标志位
+				1) 创建 
+					IPC_CREAT | 权限位
+					eg: IPC_CREAT | 0664
+				2) 打开
+					0
+		返回值:
+			如果成功，返回system v 共享内存区的id，后续操作该共享内存区都需要这个ID
+			如果失败，返回-1,errno被设置
+			
+3，shmat/shmdt
+NAME
+       shmat, shmdt - System V shared memory operations
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <sys/shm.h>
+
+	shmat 用来把共享内存区映射到进程的地址空间
+       void *shmat(int shmid, const void *shmaddr, int shmflg);
+			@shmid: 共享内存区的id，表示你想要映射到哪个共享内存区。即shmget的返回值
+			@shmaddr: 指定映射到进程地址空间的具体哪个地址去。
+					一般写为NULL，让操作系统自动来确定映射地址。
+			@shmflg: 映射标记
+				1) SHM_RDONLY  只读
+				2) 0           可读可写
+		返回值: 
+			成功返回映射后的地址
+			失败返回NULL，且errno被设置
+			
+	
+	shmdt用来把映射的共享内存区解映射
+       int shmdt(const void *shmaddr);
+			@shmaddr: 指向要解映射的共享内存区的首地址
+		返回值:
+			成功返回0 
+			失败返回-1,errno被设置
+			
+4, shmctl 对共享内存区进行控制操作
+NAME
+       shmctl - System V shared memory control
+
+SYNOPSIS
+       #include <sys/ipc.h>
+       #include <sys/shm.h>
+
+	shmctl 用来对指定的共享内存区进行控制操作
+       int shmctl(int shmid, int cmd, struct shmid_ds *buf);
+			@shmid: 共享内存区的ID，表示要操作哪个共享内存区
+			@cmd: 命令号，常用的有三个
+				IPC_RMID 用来删除该共享内存，此时第三个参数buf填为NULL
+				IPC_STAT 用来获取共享内存的状态，通过buf指向用来保存该内存区状态信息的
+							结构体变量。
+				IPC_SET  用来设置共享内存区的状态信息，通过buf指向用来保存该共享内存区
+				        状态信息的结构体变量。
+						
+		返回值:
+			成功返回0 
+			失败返回-1,errno被设置
+
+	
+
+
+
+

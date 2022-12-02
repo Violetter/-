@@ -1,0 +1,111 @@
+一、交叉开发的概念
+	交叉开发是指在通用电脑上把程序编写、编译、调试好，再下载到嵌入式产品中去运行。 
+	1. 大多数嵌入式产品只有运行环境没有开发环境。
+	2. 通用PC开发软件更加丰富，环境更加舒适、安全。
+	
+二、设置虚拟机网络
+	(1)虚拟机设置==> 网络适配器==> 桥连接模式
+	   ==> 勾选上复制物理网络连接状态 
+	(2)有线连接设置 ==> IPV4 ==> 手动分配
+	   重启网络
+	   
+	   用ifconfig命令查看网络情况
+	   测试网络:
+			ping 网关 ==>  ping 192.168.31.1
+			ping 外网 ==>  ping www.baidu.com
+			
+三、连接开发板终端
+	我们可以通过串口使用SecureCRT软件连接开发板终端
+	(1)用串口线把开发板与电脑连接好
+	(2)打开设备管理器，查看端口号
+	(3)如果没有安装USB转串口驱动，需要安装驱动
+	(4)SecureCRT软件设置
+		协议 ==> Serial
+		端口 ==> 设备管理器识别的端口号
+		波特率 ==> 115200
+		流控 ==> 去掉 RTS/CTS的勾选
+		
+四、用fastboot刷机
+	请参考gec6818/fastboot刷机资料
+	
+五、设置开发板网络 
+	打开启动设置文件 /etc/init.d/rcS
+	vi  /etc/init.d/rcS
+	在末尾添加 
+	ifconfig  eth0  down
+	ifconfig  eth0  hw  ether  08:09:00:A0:38:学号
+	ifconfig  eth0  192.168.31.xxx   netmask   255.255.255.0  up
+	
+	保存后重启开发板
+	
+六、用串口下载文件 
+	不要在跟目录下载文件，请在家目录下载文件
+	
+	rx 下载:
+		rx  指定接收的文件名 
+		传输 ==> 发送xmodem ==> 指定发送的文件
+	rz 下载:
+		rz 
+		选中要下载的文件，可以指定多个文件
+		
+七、用tftp协议网络下载文件
+	tftp和ftp都是用来传输文件的一种网络协议
+		tftp实现的时候采用的是UDP协议
+		ftp实现的时候采用的是TCP协议
+		
+	tftp: 只能传输文件
+		安装 tftpd-hpa 工具
+			sudo apt-get update
+			sudo apt-get install tftpd-hpa
+		配置 tftpd-hpa:
+			sudo vim /etc/default/tftpd-hpa
+			添加内容
+			TFTP_USERNAME = "tftp"
+			TFTP_DIRECTORY = "/home/china/tftpboot"
+			TFTP_ADDRESS = "0.0.0.0:69"
+			TFTP_OPTIONS = "-l -c -s"
+			
+		chmod 0777 "/home/china/tftpboot"
+		
+		启动 sudo service tftpd-hpa start
+		重启 sudo service tftpd-hpa restart
+		停止 sudo service tftpd-hpa stop
+		
+		开发板从指定的tftp服务器下载文件或者传输文件名字
+			tftp -g -r 要下载的文件名  192.168.xx.xx
+			tftp -p -r 要上传的文件名  192.168.xx.xx 
+		
+		tftp 超时问题检测
+			1) ping你的虚拟机是否能够Ping通？
+			2) tftp服务器设置不正确或者没有重启？  
+			
+八、安装交叉编译工具
+	1，把arm-linux-gnueabi-5.4.0.tar.gz 放在虚拟机的主目录下面
+	2，把arm-linux-gnueabi-5.4.0.tar.gz 解压到 /usr/local/arm 目录
+		sudo mkdir -p /usr/local/arm
+		sudo tar xvf arm-linux-gnueabi-5.4.0.tar.gz -C /usr/local/arm
+	3，建立链接文件(软链接)，使命令更短一些 
+		sudo ln -s arm-none-linux-gnueabi-gcc  arm-linux-gcc
+		sudo ln -s arm-none-linux-gnueabi-as   arm-linux-as
+		sudo ln -s arm-none-linux-gnueabi-g++  arm-linux-g++
+		sudo ln -s arm-none-linux-gnueabi-ld   arm-linux-ld 
+		sudo ln -s arm-none-linux-gnueabi-ar   arm-linux-ar 
+	4，修改PATH这个环境变量，PATH 是命令搜索路径 
+	   export PATH=$PATH:/usr/local/arm/5.4.0/usr/bin
+	   把上面这行命令添加到启动设置文件
+	   vi ~/.bashrc
+	   在末尾添加上面的命令
+	5, 用arm-linux-gcc 编译在arm开发板上运行的程序
+       arm-linux-gcc   hello.c  -o  hello 
+    6, 把hello下载到开发板的home目录下并执行 
+		chmod +x  hello 
+		./hello
+		
+		
+	作业:  删掉无用的零
+		输入一个字符串，字符串里可能有数字，我们把数字前面的零给删掉，
+		如果只是多个零,就保留一个零。
+		
+		eg:  输入 abc0010200+sdff000+0203+abc0 
+			 输出 abc10200+sdff0+203+abc0
+	

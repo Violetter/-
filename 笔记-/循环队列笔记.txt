@@ -1,0 +1,45 @@
+循环队列:
+	循环队列本质上还是用一个数组来实现的，但是需要用front和rear两个变量来保存
+	队列的队首元素和队尾元素的下标。
+	#define MAX_LEN  1024
+	typedef int QElemType;
+	typedef struct CircleQueue
+	{
+		QElemType Elems[MAX_LEN];
+		int front;//队首元素的下标
+		int rear;//队尾元素的下标
+		int ElemNum;//元素的数量
+	}CircleQueue;
+	
+算法分析:
+	1)在入队和出队时，队首和队尾往后走到数组末尾之后，要自动跳转到开头。
+		代码为:
+			  front = (front+1)%MAX_LEN;
+			  rear = (rear+1)%MAX_LEN;
+	2)空队列和满队列的判断条件
+		空队: ElemNum==0
+		满队: ElemNum==MAX_LEN
+	3)没有元素时，若入队，则front和rear都要同时往后走
+	  只有一个元素时，若出队，则front和rear都要同时往后走
+	  
+作业: 判断括号是否匹配
+	  ( ) [ ] { }  
+	  输入一个字符串，判断该字符串的括号是否匹配
+	  
+	eg：
+		(1+2  ==> error
+		1+2)  ==> error 
+		[1+2+(3*4]+5)  ==> error
+		
+		(1+2)*[3*4] ==> right
+		(1+2[2*4+(adsf)]) ==> right
+		
+	提示:
+		用栈
+ 
+
+
+
+
+	
+	

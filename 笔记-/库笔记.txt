@@ -1,0 +1,83 @@
+库: 把代码或功能模块的一种封装形式
+	库里面把代码或功能模块封装，它只提供它的接口说明，以及二进制代码库。
+	库用来实现一个源代码文件，调用二进制代码的一种方式。
+	优点:(1)用来共享某个功能，却不用担心泄漏源代码。
+		 (2)运行时可以直接加载使用，且只需要一份。
+		 (3)方便程序的更新和维护。
+		 
+		 
+	库一般又分为两种: 动态库、静态库
+	
+一、动态库的使用步骤
+	1，编辑源代码
+		xxx.c  功能函数的实现
+		xxx.h  函数以及数据类型的说明
+	2，生成动态库
+		(arm-linux-)gcc  -shared  -fpic    xxx.c   -o   libxxx.so
+		                 动态库   与位置无关              xxx是库名
+	3，生成可执行文件
+		(arm-linux-)gcc  main.c  -o main -I/your/head/path  -L/your/lib/path -lxxx
+		注意: 生成的main这个可执行文件，并没有包含libxxx.so的内容，只是说明了在执行的
+		时候需要用到这个库
+		
+	4，把可执行文件main和需要用到的库都下载到开发板上去
+	
+		LD_LIBRARY_PATH: 是一个环境变量，以:分开，用来指定动态库的搜索路径
+		环境变量: 就是所有程序的公共变量
+		
+		我们把动态库拷贝到动态库的搜索路径中去，或者新增一个动态库搜索路径
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:路径
+			把上面这条命令写入启动文件
+			
+			cp  libxxx.so  /usr/lib 
+			chmod +x main 
+			./main
+			
+二、静态库 
+	1， 编辑源代码文件 
+		a.c  b.c 
+		a.h  b.h 
+		
+	2，把各源代码文件编译成.o文件 
+		(arm-linux-)gcc  -c  a.c  -o   a.o
+		(arm-linux-)gcc  -c  b.c  -o   b.o 
+		
+	3，用ar命令把所有的.o文件编译生成一个静态库 
+		(arm-linux-)ar  -rc  libxxx.a   a.o   b.o  
+		                    xxx是库名
+							
+	4，生成可执行文件 
+		(arm-linux-)gcc  main.c  -o main -I/your/head/path  -L/your/lib/path -lxxx
+		注意:生成的main这个可执行文件，已经包含了libxxx.a的内容，可以直接运行
+		
+	5，把main下载到开发板，直接运行
+		chmod +x main 
+		./main
+		
+
+C语言项目:	公式计算器				 
+	输入一个公式，只有加减乘除和括号
+	1. 类型的提取
+		输入: 12+(8+4/2+(9/3))
+		把数据提取出来保存到双向链表
+		struct node
+		{
+			int type;//0表示数字，1表示字符
+			int num;
+			char c;
+			struct node *prev,*next;
+		};
+		
+	2. 判断括号是否匹配
+	3. 子问题拆解 
+		1）不带括号
+			a. 只有两个操作数  ==>  a+b  a-b  a*b  a/b
+			b. 有多个操作数 ==> 
+				算两遍： 第一遍算*/ ，第二遍算+-
+		2）带括号 ==> 消括号
+			
+			
+				
+			
+						 
+						 

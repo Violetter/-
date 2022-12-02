@@ -1,0 +1,93 @@
+目录的内容其实目录项(struct dirent)数组
+
+目录操作的相关API
+
+1，创建或删除一个空目录
+NAME
+       mkdir, mkdirat - create a directory
+
+SYNOPSIS
+       #include <sys/stat.h>
+       #include <sys/types.h>
+
+	mkdir用来创建一个空目录，该路径为pathname，mode为该目录的权限。
+	注意：目录的读权限是指可以查看目录内容，执行的权限是指可以进入目录。
+       int mkdir(const char *pathname, mode_t mode);
+			@pathname: 要创建的目录的路径
+			@mode : 指定目录的权限，用八进制表示 0777
+		返回值:
+			成功返回0
+			失败返回-1
+			
+------------------------------------------------------------
+NAME
+       rmdir - delete a directory
+
+SYNOPSIS
+       #include <unistd.h>
+
+	rmdir 只能删除一个空目录
+       int rmdir(const char *pathname);
+	   
+2，打开一个目录
+NAME
+       opendir, fdopendir - open a directory
+
+SYNOPSIS
+       #include <sys/types.h>
+       #include <dirent.h>
+
+	opendir和fdopendir都是用来打开一个目录，只不过opendir是用路径名来指定目录，
+	而fdopendir是用文件描述符来指定目录。
+       DIR *opendir(const char *name);
+       DIR *fdopendir(int fd);
+	 
+	返回值:
+		如果成功返回一个DIR的指针，在Unix/Linux下面，目录用DIR结构体来维护的。
+		失败返回NULL，errno被设置
+		
+3，读一个目录
+NAME
+       readdir - read a directory
+
+SYNOPSIS
+       #include <dirent.h>
+
+	readdir用来从dirp指定的目录中，读取其中的目录项(struct dirent)并返回。
+	目录文件就是一个目录项数组，里面保存的是文件的i-node编号
+       struct dirent *readdir(DIR *dirp);
+			@dirp: 表示要读哪一个打开的目录
+		返回值: 
+			如果成功返回一个目录项(struct dirent指针)，遍历该数组的下标加一。
+			下次再调用readdir读同一个目录，则返回下一个目录项。
+			如果读完了或者出错了，则返回NULL。
+			
+	
+		 struct dirent {
+               ino_t          d_ino;       //该文件的i-node编号
+               off_t          d_off;       //偏移量，即数组的下标
+               unsigned short d_reclen;    //这条结构体的长度
+               unsigned char  d_type;      //该目录项对象的文件的类型
+											(有些文件系统不支持)
+               char           d_name[256]; //文件的名字(不带路径)
+           };
+
+			NOTE: 只有d_ino和d_name这两个成员变量是被所有的系统支持的。
+			
+4. closedir 关闭一个目录
+NAME
+       closedir - close a directory
+
+SYNOPSIS
+       #include <sys/types.h>
+
+       #include <dirent.h>
+
+       int closedir(DIR *dirp);
+
+
+			
+	
+
+
+
